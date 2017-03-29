@@ -29,12 +29,18 @@
       data ifirst/1/
       character(len=1024) :: filepath 
 
+!... define trig functions in degrees (not standard lib funcs in gfortran)      
+      real cosd, sind,x,thet,pi
+      parameter(pi=4*ATAN(1.)) ! Define pi
+      sind(thet) = sin(thet/180.0*pi) ! Define degrees trig functions
+      cosd(thet) = cos(thet/180.0*pi)
+      
 !... read eof file on first call
 
       if (ifirst == 1) then
         ifirst = 0
         filepath = trim(data_dir)//'snoem_eof.dat'
-        open(unit=1,file=filepath,status='old',readonly)
+        open(unit=1,file=filepath,status='old')
         read(1,*) (z(k),k=1,16)
         read(1,*) (mlat(j),j=1,33)
         read(1,*) ((no_mean(j,k),j=1,33),k=1,16)
