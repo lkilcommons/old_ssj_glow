@@ -1,12 +1,12 @@
 import sys, datetime
 import numpy as np
 import matplotlib.pyplot as pp
-sys.path.append('/home/liamk/seshat/glowcond/glow098beta/')
-import pyglow098beta
+sys.path.append('/home/liamk/seshat/glowcond/glow098release/GLOW/')
+import pyglow098
 from geospacepy import special_datetime,dmspcdf_tools,dmsp_spectrogram, satplottools
-from ovationpyme import ovation_prime
+#from ovationpyme import ovation_prime
 
-op_cond_estimator = ovation_prime.ConductanceEstimator(datetime.datetime(2010,5,27,12),datetime.datetime(2010,5,30,12))
+#op_cond_estimator = ovation_prime.ConductanceEstimator(datetime.datetime(2010,5,27,12),datetime.datetime(2010,5,30,12))
 
 year,month,day = 2010,5,29
 sat = 16
@@ -71,21 +71,22 @@ usephij = 1 #Use SSJ fluxes or only Maxwellian
 utsin = uts[0]*np.ones((ncond,))
 efsin=np.ones_like(efs)*efs[0]
 ecsin=np.ones_like(ecs)*ecs[0]
-pyglow098beta.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,usephij)
-pedcond = pyglow098beta.cglow.pedcond
-hallcond = pyglow098beta.cglow.hallcond
-phitop = pyglow098beta.cglow.phitop
-ener = pyglow098beta.cglow.ener
+pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,usephij)
+pedcond = pyglow098.cglow.pedcond
+hallcond = pyglow098.cglow.hallcond
+phitop = pyglow098.cglow.phitop
+ener = pyglow098.cglow.ener
+z = pyglow098.cglow.zz/1.0e5 #cm->km
 
 print hallcond.shape
-#pyglow098beta.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
-#pedcondmax = pyglow098beta.cglow.pedcond
-#hallcondmax = pyglow098beta.cglow.hallcond
+#pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
+#pedcondmax = pyglow098.cglow.pedcond
+#hallcondmax = pyglow098.cglow.hallcond
 
 #print np.nanemean(pedcond - pedcondmax)
 
 #Predict Ovation Prime Conductance
-
+"""
 ovation_mlatgrid,ovation_mltgrid,pedgrid,hallgrid = op_cond_estimator.get_conductance(dts[len(dts)/2],hemi='N',
 			auroral=True,solar=False,background_p=4.,background_h=4.)
 
@@ -94,14 +95,14 @@ cond_ped_op = ped_interpolator.interpolate(mlats,mlts)
 
 hall_interpolator = ovation_prime.LatLocaltimeInterpolator(ovation_mlatgrid,ovation_mltgrid,hallgrid)
 cond_hall_op = hall_interpolator.interpolate(mlats,mlts)
-
+"""
 f = pp.figure()
 #a0 = f.add_subplot(511)
 #a05 = f.add_subplot(512)
 a1 = f.add_subplot(311)
 a2 = f.add_subplot(312)
 a3 = f.add_subplot(313)
-
+"""
 z = np.array([80.0,81.5,83.0,84.5,86.0,87.5,89.0,90.5,92.0,93.5,
      95.0,97.5,99.0,100.5,102.0,103.5,105.0,107.5,109.,111.,
      113.,115.,117.5,120.,122.5,125.,128.,131.,135.,139.,
@@ -111,6 +112,7 @@ z = np.array([80.0,81.5,83.0,84.5,86.0,87.5,89.0,90.5,92.0,93.5,
      390.,400.,410.,420.,430.,440.,450.,460.,470.,480.,
      490.,500.,510.,520.,530.,540.,550.,560.,570.,580.,
      590.,600.,610.,620.,630.,640.])
+"""
 """
 z = np.array([80., 81., 82., 83., 84., 85., 86., 87., 88., 89.,
                 90., 91., 92., 93., 94., 95., 96., 97., 98., 99.,
@@ -191,10 +193,10 @@ a3.set_ylabel('Altitude\n[km]')
 #a2.plot(uts,dVy)
 
 a2.plot(uts,intped,'b-',label='DMSP+GLOW Ped')
-a2.plot(uts,cond_ped_op,'b--',label='OvationPyme Ped')
+#a2.plot(uts,cond_ped_op,'b--',label='OvationPyme Ped')
 #a2.plot(uts[:-1],np.diff(inthall),label='dPed')
 a2.plot(uts,inthall,'r-',label='DMSP+GLOW Hall')
-a2.plot(uts,cond_hall_op,'r--',label='OvationPyme Hall')
+#a2.plot(uts,cond_hall_op,'r--',label='OvationPyme Hall')
 #a2.set_ylim([0,120])
 #a2.set_ylim([0,1])
 a2.legend(ncol=2,loc=0)

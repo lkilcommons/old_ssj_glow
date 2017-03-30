@@ -63,6 +63,7 @@
                     sespec,zte,ze,zmaj,uflx,dflx,tez,efrac           ! formerly /cglow/
     use cglow,only: siga,sigs,pe,sigex,sec,iimaxx,pin                ! formerly /cxsect/
     use cglow,only: ww                                               ! formerly /cxpars/
+    use cglow,only: cglow_save_exsect,cglow_load_exsect
 
     implicit none
 
@@ -89,11 +90,20 @@
 !
 ! First call only:  calculate cross-sectons:
 !
-    if (ifirst == 1) then
-      call exsect (ener, del)
-      ifirst = 0
-    endif
+
+! 
+! LMK Made this change to store the cross-sections
+! cglow_save_exsect stores a copy of the cross-section arrays
+! cglow_load_exsect retrieves that copy into the original arrays
+! Why does this fix the problem? Are they being modified? Zero'd?
 !
+  if (ifirst .eq. 1) then
+    call exsect (ener, del)
+    !call cglow_save_exsect
+    ifirst = 0
+  endif
+  !call cglow_load_exsect
+
 ! Zero variables:
 !
     alpha(1) = 0.

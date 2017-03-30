@@ -135,7 +135,7 @@
 ! First call only: set up energy grid:
 
       if (ifirst == 1) then
-        ifirst = 0
+        ifirst = 1
         call egrid (ener, del, nbins)
       endif
 

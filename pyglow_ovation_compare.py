@@ -1,8 +1,8 @@
 import sys, datetime
 import numpy as np
 import matplotlib.pyplot as pp
-sys.path.append('/home/liamk/seshat/glowcond/glow098beta/')
-import pyglow098beta
+sys.path.append('/home/liamk/seshat/glowcond/glow098release/GLOW/')
+import pyglow098
 from geospacepy import special_datetime,dmspcdf_tools,dmsp_spectrogram, satplottools
 from ovationpyme import ovation_prime
 
@@ -76,16 +76,17 @@ for orbit in range(14):
 	utsin = uts[0]*np.ones((ncond,))
 	efsin=np.ones_like(efs)*efs[0]
 	ecsin=np.ones_like(ecs)*ecs[0]
-	pyglow098beta.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,usephij)
-	pedcond = pyglow098beta.cglow.pedcond
-	hallcond = pyglow098beta.cglow.hallcond
-	phitop = pyglow098beta.cglow.phitop
-	ener = pyglow098beta.cglow.ener
+	pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,usephij)
+	pedcond = pyglow098.cglow.pedcond
+	hallcond = pyglow098.cglow.hallcond
+	phitop = pyglow098.cglow.phitop
+	ener = pyglow098.cglow.ener
+	z = pyglow098.zz/1.0e5
 
 	print hallcond.shape
-	#pyglow098beta.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
-	#pedcondmax = pyglow098beta.cglow.pedcond
-	#hallcondmax = pyglow098beta.cglow.hallcond
+	#pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
+	#pedcondmax = pyglow098.cglow.pedcond
+	#hallcondmax = pyglow098.cglow.hallcond
 
 	#print np.nanemean(pedcond - pedcondmax)
 
@@ -121,6 +122,7 @@ for orbit in range(14):
 	a44 = pp.subplot(gs[3,split:split+cbwidth])
 
 	# Heights from GLOW (will make an output in the future (maybe already is part of cglow?))
+	"""
 	z = np.array([80.0,81.5,83.0,84.5,86.0,87.5,89.0,90.5,92.0,93.5,
 	     95.0,97.5,99.0,100.5,102.0,103.5,105.0,107.5,109.,111.,
 	     113.,115.,117.5,120.,122.5,125.,128.,131.,135.,139.,
@@ -130,7 +132,8 @@ for orbit in range(14):
 	     390.,400.,410.,420.,430.,440.,450.,460.,470.,480.,
 	     490.,500.,510.,520.,530.,540.,550.,560.,570.,580.,
 	     590.,600.,610.,620.,630.,640.])
-
+	"""
+	
 	#Limit to heights at which GLOW is trustworthy
 	ped = pedcond[:,z<200.]
 	hall = hallcond[:,z<200.]

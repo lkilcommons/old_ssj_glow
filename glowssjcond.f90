@@ -49,7 +49,7 @@ subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,x
   use cglow,only: photoi,photod,phono,aglw,tei,tpi,tir,ecalc,zxden,zeta,zceta,zlbh
   use cglow,only: pedcond,hallcond
   use cglow,only: cglow_init, cglow_init_backup, cglow_init_cond, cglow_free_cond
-  use cglow,only: cglow_clear
+  use cglow,only: cglow_clear, cglow_clear_exsect
   use cglow,only: data_dir
 
   implicit none
@@ -115,7 +115,7 @@ subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,x
 !
 ! Set number of altitude levels:
 !
-  jmax = 86
+  jmax = 102
 
 !
 ! Allocate local arrays:
@@ -150,6 +150,7 @@ subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,x
 
     z(:)=0.;zun(:)=0.;zvn(:)=0.;outf(:,:)=0.;
     call cglow_clear
+    !call cglow_clear_exsect
     !if (instance .gt. 1) call cglow_load_exsect
     
 ! 

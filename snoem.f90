@@ -9,19 +9,20 @@
 
 ! Adapted by Stan Solomon, 5/2014, from IDL and F90 code supplied by Dan Marsh. 
 
-    subroutine snoem(doy, kp, f107, z, mlat, nozm)
+    subroutine snoem(doy, kp, f107, z2, mlat2, nozm)
 
       use cglow,only: data_dir
 
       implicit none
-      save
+      
 
       integer,intent(in) :: doy
       real,intent(in) :: kp, f107
-      real,intent(out) :: z(16), mlat(33), nozm(33,16)
+      real,intent(out) :: z2(16), mlat2(33), nozm(33,16)
 
-      real :: no_mean(33,16)   ! mean nitric oxide distribution
-      real :: eofs(33,16,3)    ! empirical orthogonal functions
+      real,save :: z(16),mlat(33)
+      real,save :: no_mean(33,16)   ! mean nitric oxide distribution
+      real,save :: eofs(33,16,3)    ! empirical orthogonal functions
       real :: theta0           ! day number in degrees
       real :: dec              ! solar declination angle
       real :: m1, m2, m3       ! coefficients for first 3 eofs
@@ -30,7 +31,7 @@
       character(len=1024) :: filepath 
 
 !... define trig functions in degrees (not standard lib funcs in gfortran)      
-      real cosd, sind,x,thet,pi
+      real cosd,sind,thet,pi
       parameter(pi=4*ATAN(1.)) ! Define pi
       sind(thet) = sin(thet/180.0*pi) ! Define degrees trig functions
       cosd(thet) = cos(thet/180.0*pi)
@@ -47,6 +48,8 @@
         read(1,*) (((eofs(j,k,n),j=1,33),k=1,16),n=1,3)
         close(unit=1)
       endif
+      z2(:) = z(:)
+      mlat2(:) = mlat(:)
 
 !... calculate coefficients (m1 to m3) for eofs based on geophysical parameters
 
@@ -72,7 +75,7 @@
       m3 =  alog10(f107) * 6.35777 - 13.8163 
 
 !... zonal mean distrib. is sum of mean and eofs
-
+      
       do k=1,16
         do j=1,33
           nozm(j,k) = no_mean(j,k)-m1*eofs(j,k,1)+m2*eofs(j,k,2)-m3*eofs(j,k,3) 

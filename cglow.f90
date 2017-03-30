@@ -391,6 +391,21 @@ module cglow
     !vcb=vcb2
   end subroutine
   
+  subroutine cglow_clear_exsect
+
+    sigs(:,:)=0.;pe(:,:)=0.;pin(:,:)=0.;
+    sigex(:,:,:)=0.;sigix(:,:,:)=0.;
+
+    siga(:,:,:)=0.;sec(:,:,:)=0.;
+
+    iimaxx(:)=0
+
+    ww(:,:)=0.;ao(:,:)=0.;omeg(:,:)=0.;anu(:,:)=0.;bb(:,:)=0.;
+    auto(:,:)=0.;thi(:,:)=0.;ak(:,:)=0.;aj(:,:)=0.;ts(:,:)=0.;
+    ta(:,:)=0.;tb(:,:)=0.;gams(:,:)=0.;gamb(:,:)=0.;
+
+  end subroutine
+
   subroutine cglow_clear
     zno(:)=0.;
     zz(:)=0.;zo(:)=0.;zn2(:)=0.;zo2(:)=0.;zns(:)=0.;znd(:)=0.;zrho(:)=0.;
@@ -411,17 +426,6 @@ module cglow
     zceta(:,:,:)=0.
 
     zlbh(:,:)=0.
-
-    sigs(:,:)=0.;pe(:,:)=0.;pin(:,:)=0.;
-    sigex(:,:,:)=0.;sigix(:,:,:)=0.;
-
-    siga(:,:,:)=0.;sec(:,:,:)=0.;
-
-    iimaxx(:)=0
-
-    ww(:,:)=0.;ao(:,:)=0.;omeg(:,:)=0.;anu(:,:)=0.;bb(:,:)=0.;
-    auto(:,:)=0.;thi(:,:)=0.;ak(:,:)=0.;aj(:,:)=0.;ts(:,:)=0.;
-    ta(:,:)=0.;tb(:,:)=0.;gams(:,:)=0.;gamb(:,:)=0.;
 
     vcb(:)=0.
     efrac=0.
