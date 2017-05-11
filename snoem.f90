@@ -26,7 +26,8 @@
       real :: theta0           ! day number in degrees
       real :: dec              ! solar declination angle
       real :: m1, m2, m3       ! coefficients for first 3 eofs
-      integer ifirst, j, k, n
+      integer,save :: ifirst
+      integer :: j, k, n
       data ifirst/1/
       character(len=1024) :: filepath 
 
