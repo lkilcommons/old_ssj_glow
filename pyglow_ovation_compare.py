@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('Agg')
 import sys, datetime
 import numpy as np
 import matplotlib.pyplot as pp
@@ -81,7 +83,7 @@ for orbit in range(14):
 	hallcond = pyglow098.cglow.hallcond
 	phitop = pyglow098.cglow.phitop
 	ener = pyglow098.cglow.ener
-	z = pyglow098.zz/1.0e5
+	z = pyglow098.cglow.zz/1.0e5
 
 	print hallcond.shape
 	#pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
@@ -93,7 +95,7 @@ for orbit in range(14):
 	#Predict Ovation Prime Conductance
 
 	ovation_mlatgrid,ovation_mltgrid,pedgrid,hallgrid = op_cond_estimator.get_conductance(dts[len(dts)/2],hemi='N',
-				auroral=True,solar=False,background_p=4.,background_h=4.)
+				auroral=True,solar=True,background_p=0.,background_h=0.)
 
 	ped_interpolator = ovation_prime.LatLocaltimeInterpolator(ovation_mlatgrid,ovation_mltgrid,pedgrid)
 	cond_ped_op = ped_interpolator.interpolate(mlats,mlts)
@@ -194,6 +196,6 @@ for orbit in range(14):
 	pp.subplots_adjust(bottom=.2)
 
 	f.suptitle('DMSP SSJ driving GLOW 0.98 \n F16, May 29, 2010 %s-%s' % (dts[0].strftime('%H:%M'),dts[-1].strftime('%H:%M')))
-	f.savefig('/home/liamk/Desktop/glowbeta_ssj_ovation_%d%d%d_orbit%d.png' % (year,month,day,orbit),dpi=300.)
+	f.savefig('/home/liamk/Desktop/glowbeta_ssj_ovation_%d%d%d_orbit%d_proper_sza.png' % (year,month,day,orbit),dpi=300.)
 
 	pp.pause(1)

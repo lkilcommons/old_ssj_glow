@@ -339,10 +339,26 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		f.savefig(figfn)
 
 if __name__ == '__main__':
+	import argparse
+	from geospacepy import special_datetime
+
+	parser = argparse.ArgumentParser(description="Add GLOW conductance to SSJ CDFs")
+
+	parser.add_argument("dmsp_number", help='Process SSM for F## where this argument is ##',type=int,default=None)
+	parser.add_argument("year", help='Year of day to process',type=int,default=None)
+	parser.add_argument("doy", help='Day of year to process',type=int,default=None)
+	parser.add_argument("--clobber", help='Overwrite Conductance SSJ CDF file if exists',action='store_true',default=False)
+	parser.add_argument("--plot", help='Plot conductance and conductivity',action='store_true',default=False)
+	parser.add_argument("--silent", help='Do not print to screen',action='store_true',default=False)
 	
-	sat,year,month,day = 18,2011,5,28
-	run_ssj_glow(sat,year,month,day,create_conductance_cdf=True,clobber=True,silent=False)
-	for orbit in range(1,15):
-		plot_orbit_cond(sat,year,month,day,1*orbit,minlat=50.,plotdir=None)
-		plot_orbit_cond(sat,year,month,day,-1*orbit,minlat=50.,plotdir=None)
+	args = parser.parse_args()	
+	
+	dt = special_datetime.doy2datetime(args.doy,args.year)
+	sat,year,month,day = args.dmsp_number,dt.year,dt.month,dt.day
+	run_ssj_glow(sat,year,month,day,create_conductance_cdf=True,clobber=args.clobber,silent=args.silent)
+
+	if args.plot:
+		for orbit in range(1,15):
+			plot_orbit_cond(sat,year,month,day,1*orbit,minlat=50.,plotdir=None)
+			plot_orbit_cond(sat,year,month,day,-1*orbit,minlat=50.,plotdir=None)
 
