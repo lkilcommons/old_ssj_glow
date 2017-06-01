@@ -68,14 +68,14 @@ def mappable_glow(inputs):
 	efs,ecs = ele_total_fluxes.flatten(),ele_avg_energies.flatten()
 	phij = ele_chan_nfluxes    
 
-	print("Start GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,uts[0]/3600.,uts[-1]/3600.))
+	print(("Start GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,uts[0]/3600.,uts[-1]/3600.)))
 
 	usephij = 0 if maxwellian else 1 #Use SSJ fluxes (1) or only Maxwellian (0)
 	#Test means test repeatability of GLOW (i.e. look effect of bug with save and intent(out))
 	
 	pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,usephij)
 
-	print("End GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,uts[0]/3600.,uts[-1]/3600.))
+	print(("End GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,uts[0]/3600.,uts[-1]/3600.)))
 
 	pedcond = pyglow098.cglow.pedcond
 	hallcond = pyglow098.cglow.hallcond
@@ -119,10 +119,10 @@ def get_f107_ap(dt,silent=False):
 	f107 = np.nanmean(f107_81[today])
 	ap = np.nanmean(ap_81[today])
 	if not silent:
-		print(dt.strftime('%Y%m%d %H:%M'))
-		print('Yesterday F107 %.2f' % (f107p))
-		print('Today F107 %.2f'  % (f107))
-		print('81-day avg F107: %.2f'  % (f107a))
+		print((dt.strftime('%Y%m%d %H:%M')))
+		print(('Yesterday F107 %.2f' % (f107p)))
+		print(('Today F107 %.2f'  % (f107)))
+		print(('81-day avg F107: %.2f'  % (f107a)))
 	return f107,ap,f107p,f107a
 
 def get_cond_cdffn(ssj_cdffn,cond_cdf_dir=None):
@@ -131,7 +131,7 @@ def get_cond_cdffn(ssj_cdffn,cond_cdf_dir=None):
 	else:
 		if not os.path.exists(cond_cdf_dir):
 			os.makedirs(cond_cdf_dir)
-			print("Made %s" %(cond_cdf_dir))
+			print(("Made %s" %(cond_cdf_dir)))
 
 		ssj_cdffn_leaf = os.path.split(ssj_cdffn)[-1]
 		cond_cdffn = os.path.join(cond_cdf_dir,os.path.splitext(ssj_cdffn)[0]+'_GLOWcond.cdf')
@@ -203,7 +203,7 @@ def run_ssj_glow(sat,year,month,day,cdfdir=None,minlat=50.,create_conductance_cd
 
 		endsec = special_datetime.datetime2sod(datetime.datetime.now())
 
-		print('------Took %.1f minutes-----' % ((startsec-endsec)/60.))
+		print(('------Took %.1f minutes-----' % ((startsec-endsec)/60.)))
 
 		#
 		#Unpack the results
