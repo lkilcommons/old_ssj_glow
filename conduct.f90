@@ -37,12 +37,12 @@
 !     nu_nop   ! [[nop~o2]n(o2)+[nop~o]n(o)+[nop~n2]n(n2)]
 !     nu_ne    ! electron~neutral
 
-    SUBROUTINE CONDUCT(lat, long, alt, nO, nO2, nN2, nOp, nO2p, nNOp, &
+    SUBROUTINE CONDUCT(lat, long, alt, nO, nO2, nN2, nOp, nO2p, nNOp, xnE, &
                          Tn, Ti, Te, PedCond, HallCond)
 
       implicit none
 
-      real, intent(in) :: lat,long,alt,nOp,nO2p,nNOp
+      real, intent(in) :: lat,long,alt,nOp,nO2p,nNOp,xnE
       real, intent(in) :: Tn, Te, Ti, nO, nO2, nN2
       real, intent(out) :: PedCond, HallCond
 
@@ -77,10 +77,10 @@
 ! which includes the Burnside factor correction for O+-O collision frequency.
 ! NOTE: densities are in cm^-3 and coefficients are in cm^3 s^-1.
 
-      nu_O2pO2 = nO2*(2.59e-11)*sqrt((Ti+Tn)/2.)*((1.-0.073*log10((Ti+Tn)/2.))**2)      
+      nu_O2pO2 = nO2*(2.59e-11)*sqrt((Ti+Te)/2.)*((1.-0.073*log10((Ti+Te)/2.))**2)      
       nu_OpO2 = nO2*(6.64e-10)
       nu_NOpO2 = nO2*(4.27e-10)
-      nu_OpO = nO*((3.67e-11)*sqrt((Ti+Tn)/2.)*((1.-0.064*log10((Ti+Tn)/2.))**2)*BurnFac)
+      nu_OpO = nO*((3.67e-11)*sqrt((Ti+Te)/2.)*((1.-0.064*log10((Ti+Te)/2.))**2)*BurnFac)
       nu_NOpO = nO*(2.44e-10)
       nu_O2pO = nO*(2.31e-10)
       nu_O2pN2 = nN2*(4.13e-10)
@@ -118,7 +118,8 @@
 ! Define electron density for purpose of conductivity calculations to be
 ! the sum of the major ions:
 
-      nE = nOp+nO2p+nNOp
+      !nE = nOp+nO2p+nNOp
+      nE = xnE
 
 ! Calculate Pederson and Hall conductivity using the TIE-GCM formulation:
 ! NOTE: multiplied by 1.e6 to convert densities to m^-3, so that

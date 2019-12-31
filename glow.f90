@@ -147,6 +147,7 @@
 
       call solzen (idate, ut, glat, glong, sza)
       sza = sza * pi/180.
+      sza = 2.0 ! To calculate auroral contribution only
 
 ! Scale solar flux:
 

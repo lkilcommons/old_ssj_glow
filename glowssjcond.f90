@@ -188,7 +188,7 @@ subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,x
 ! Call MAXT to put auroral electron flux specified by namelist input into phitop array:
 !
     phitop(:) = 0.
-    if (ef>.001 .and. ec>1. .and. usephij.gt.0) call maxt (ef,ec,ener,del,nbins,itail,fmono,emono,phitop)
+    if (ef>.001 .and. ec>1.) call maxt (ef,ec,ener,del,nbins,itail,fmono,emono,phitop)
     !Fill in appropirate bins with SSJ flux
     n=19
     if (usephij.eq.1) then
@@ -211,12 +211,18 @@ subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,x
             x = ener(m); x0 = enerj(n); x1 = enerj(n-1);
             y0 = phij(instance,n); y1 = phij(instance,n-1);
             phitop(m) = y0 + (x-x0)*(y1-y0)/(x1-x0)
+
           endif
+          ! if (mod(instance,300).eq.0) then
+          !   write(6,*) ener(m),'jchannel: ',n,'jflux: ',phij(instance,n),'gflux: ',phitop(m)
+          ! endif
         else if (ener(m) .gt. enerj(1)+delj(1)) then 
           exit
         endif
       enddo
     endif
+
+
 !
 ! Fill altitude array, converting to cm:
 !
@@ -235,7 +241,8 @@ subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,x
 !
     do j=1,jmax
       call conduct (glat, glong, z(j), zo(j), zo2(j), zn2(j), &
-                    zxden(3,j), zxden(6,j), zxden(7,j), ztn(j), zti(j), zte(j), &
+                    zxden(3,j), zxden(6,j), zxden(7,j), ecalc(j), &
+                    ztn(j), zti(j), zte(j), &
                     pedcond(instance,j), hallcond(instance,j))
     enddo
     !j=30

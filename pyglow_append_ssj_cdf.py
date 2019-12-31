@@ -1,11 +1,15 @@
 import sys, datetime, os, shutil, timeit
 import numpy as np
 import matplotlib.pyplot as pp
+import traceback
 sys.path.append('/home/liamk/seshat/glowcond/glow098release/GLOW/')
 from geospacepy import special_datetime,dmspcdf_tools,dmsp_spectrogram, satplottools, omnireader
 from spacepy import pycdf
 
 import multiprocessing
+
+class NoSSJCDFError(Exception):
+	pass
 
 def mappable_glow(inputs):
 	year,month,day,uts,glats,glons,ele_chan_nfluxes,ele_total_fluxes,ele_avg_energies,test,maxwellian = inputs[:]
@@ -30,23 +34,43 @@ def mappable_glow(inputs):
 	f107s = np.ones((ncond,))*f107
 	f107ps = np.ones((ncond,))*f107p
 	aps = np.ones((ncond,))*ap
-	efs,ecs = ele_total_fluxes.flatten(),ele_avg_energies.flatten()
-	phij = ele_chan_nfluxes    
+	efs = ele_total_fluxes.flatten()
+	ecs = ele_avg_energies.flatten()
+	phij = ele_chan_nfluxes
 
-	print("Start GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,uts[0]/3600.,uts[-1]/3600.))
+	print("Start GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,
+																uts[0]/3600.,
+																uts[-1]/3600.))
 
 	usephij = 0 if maxwellian else 1 #Use SSJ fluxes (1) or only Maxwellian (0)
 	#Test means test repeatability of GLOW (i.e. look effect of bug with save and intent(out))
-	
+
 	pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,usephij)
 
-	print("End GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,uts[0]/3600.,uts[-1]/3600.))
+	pedcond_aur = pyglow098.cglow.pedcond.copy()
+	hallcond_aur = pyglow098.cglow.hallcond.copy()
 
-	pedcond = pyglow098.cglow.pedcond
-	hallcond = pyglow098.cglow.hallcond
-	phitop = pyglow098.cglow.phitop
-	ener = pyglow098.cglow.ener
-	z = pyglow098.cglow.zz/1.0e5 #cm->km
+	phitop = pyglow098.cglow.phitop.copy()
+	ener = pyglow098.cglow.ener.copy()
+	z = pyglow098.cglow.zz.copy()/1.0e5 #cm->km
+
+	difference_method = False
+	if difference_method:
+		phij_noaur = np.zeros_like(phij)
+		pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij_noaur,usephij)
+
+		pedcond_noaur = pyglow098.cglow.pedcond.copy()
+		hallcond_noaur = pyglow098.cglow.hallcond.copy()
+
+		pedcond = pedcond_aur-pedcond_noaur
+		hallcond = hallcond_aur-hallcond_noaur
+	else:
+		pedcond = pedcond_aur
+		hallcond = hallcond_aur
+
+	print("End GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,
+															uts[0]/3600.,
+															uts[-1]/3600.))
 
 	#Apply 200 km ceiling (above which GLOW is not so reliable)
 	ped = pedcond[:,z<200.]
@@ -97,14 +121,14 @@ def _unused():
 
 def get_cond_cdffn(ssj_cdffn,cond_cdf_dir='/home/liamk/code/condcdf'):
 	if cond_cdf_dir is None:
-		cond_cdffn = os.path.splitext(ssj_cdffn)[0]+'_GLOWcond.cdf'
+		cond_cdffn = os.path.splitext(ssj_cdffn)[0]+'_GLOWcond_auroral_pi.cdf'
 	else:
 		if not os.path.exists(cond_cdf_dir):
 			os.makedirs(cond_cdf_dir)
 			print("Made %s" %(cond_cdf_dir))
 
 		ssj_cdffn_leaf = os.path.split(ssj_cdffn)[-1]
-		cond_cdffn = os.path.join(cond_cdf_dir,os.path.splitext(ssj_cdffn)[0]+'_GLOWcond.cdf')
+		cond_cdffn = os.path.join(cond_cdf_dir,os.path.splitext(ssj_cdffn)[0]+'_GLOWcond_auroral_pi.cdf')
 	return cond_cdffn
 
 def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clobber=True,silent=False):
@@ -113,14 +137,17 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 	for a particular day
 	"""
 
-	n_processers = 6
-	
+	n_processers = 4
+
 	test = False # Test for intent(out) bug
 	maxwellian = False # Use maxwellian spectrum instead of DMSP SSJ
 
 	dt = datetime.datetime(year,month,day,12,0,0)
 
 	cdffn = dmspcdf_tools.get_cdf(sat,year,month,day,'ssj',return_file=True)
+	if not os.path.exists(cdffn):
+		raise NoSSJCDFError('No such CDF %s' % (cdffn))
+
 	with pycdf.CDF(cdffn) as cdf:
 
 		dts = cdf['Epoch'][:]
@@ -132,14 +159,16 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 		mlats = cdf['SC_APEX_LAT'][:].flatten()
 		glons = cdf['SC_GEOCENTRIC_LON'][:].flatten()
 
-		nflux = cdf['ELE_DIFF_ENERGY_FLUX'][:]/chen
+		nflux = cdf['ELE_DIFF_ENERGY_FLUX'][:]/chen*np.pi
 		avg_energy = cdf['ELE_AVG_ENERGY'][:].flatten()
-		total_eflux = cdf['ELE_TOTAL_ENERGY_FLUX'][:].flatten()
+		total_eflux = cdf['ELE_TOTAL_ENERGY_FLUX'][:].flatten()*np.pi
+		#STD is already in mW/m^2
+		total_eflux_std = cdf['ELE_TOTAL_ENERGY_FLUX_STD'][:].flatten()
 
 		total_eflux *= 1.6e-12 #eV/cm/s/sr -> mW/m^2
-		
+
 		min_mlat = 50.
-		
+
 		#
 		#Pack up the inputs
 		#
@@ -149,7 +178,7 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 		for i_subset in range(n_processers):
 			subset_length = n_times/n_processers
 			uts_start,uts_end = i_subset*subset_length,(i_subset+1)*subset_length
-			in_lats = np.abs(mlats) > min_mlat 
+			in_lats = np.abs(mlats) > min_mlat
 			subset_mask = np.logical_and(uts >= uts_start,uts < uts_end)
 			subset_mask = np.logical_and(subset_mask,in_lats)
 			subset_masks.append(subset_mask)
@@ -159,8 +188,16 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 			nflux_in = nflux[subset_mask,:]
 			avg_energy_in = avg_energy[subset_mask]
 			total_eflux_in = total_eflux[subset_mask]
-			inputs.append((year,month,day,uts_in,glats_in,glons_in,nflux_in,avg_energy_in,total_eflux_in,test,maxwellian))
-		
+			total_eflux_std_in = total_eflux_std[subset_mask]
+			#Zero uncertain fluxes (potential source of strange dayside bands)
+			uncert_flux = total_eflux_in<total_eflux_std_in/2
+			total_eflux_in[uncert_flux]=0.
+			nflux_in[uncert_flux,:]=0.
+			inputs.append((year,month,day,
+							uts_in,glats_in,glons_in,
+							nflux_in,avg_energy_in,total_eflux_in,
+							test,maxwellian))
+
 		#
 		#Pass to the pool
 		#
@@ -173,7 +210,7 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 
 		endsec = special_datetime.datetime2sod(datetime.datetime.now())
 
-		print('------Took %.1f minutes-----' % ((startsec-endsec)/60.))
+		print('------Took %.1f minutes-----' % ((endsec-startsec)/60.))
 
 		#
 		#Unpack the results
@@ -200,34 +237,37 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 			cdffn_cond = get_cond_cdffn(cdffn)
 			if os.path.exists(cdffn_cond):
 				if clobber:
+					print('Conductance CDF %s will be clobbered.' % (cdffn_cond))
 					os.remove(cdffn_cond)
 					shutil.copyfile(cdffn,cdffn_cond)
 				else:
 					raise IOError('Conductance CDF %s exists and clobber is False' % (cdffn_cond))
 			#Copy the SSJ file
-			shutil.copyfile(cdffn,cdffn_cond) 
+			shutil.copyfile(cdffn,cdffn_cond)
+			if not os.path.exists(cdffn_cond):
+				raise RuntimeError('Conductance file %s not copied' % (cdffn_cond))
 
 			with pycdf.CDF(cdffn_cond) as cdf_cond:
 				cdf_cond.readonly(False) # Modify the file
 				cdf_cond['CONDUCTIVITY_ALTITUDES']=z
 				cdf_cond['CONDUCTIVITY_ALTITUDES'].attrs['UNITS']='km'
-				
+
 				cdf_cond['PEDERSEN_CONDUCTANCE']=intped
 				cdf_cond['PEDERSEN_CONDUCTANCE'].attrs['UNITS']='S'
-				
+
 				cdf_cond['HALL_CONDUCTANCE']=inthall
 				cdf_cond['HALL_CONDUCTANCE'].attrs['UNITS']='S'
-				
+
 				cdf_cond['PEDERSEN_CONDUCTIVITY']=pedcond
 				cdf_cond['PEDERSEN_CONDUCTIVITY'].attrs['UNITS']='S/m'
-				
+
 				cdf_cond['HALL_CONDUCTIVITY']=hallcond
 				cdf_cond['HALL_CONDUCTIVITY'].attrs['UNITS']='S/m'
-				
-	 
+
+
 def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 
-	#    
+	#
 	#Prepare Plots
 	#
 	import matplotlib.gridspec as gridspec
@@ -267,15 +307,15 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		os.makedirs(plotdir)
 
 	figfn = os.path.join(plotdir,'%s_%s_%d.png' % (cdffn_cond_leaf,hemi,np.abs(orbit)))
-	
+
 	with pycdf.CDF(cdffn_cond) as cdf:
 
 		orbit_index = cdf['ORBIT_INDEX'][:].flatten()
 		mlats = cdf['SC_APEX_LAT'][:].flatten()
-		
+
 		in_orbit = orbit_index == orbit
 		subset = np.logical_and(in_orbit,np.abs(mlats)>minlat)
-   
+
 		dts = cdf['Epoch'][:][subset]
 		uts = special_datetime.datetimearr2sod(cdf['Epoch'][:]).flatten()[subset]
 		hod = uts/3600.
@@ -285,7 +325,7 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		glons = cdf['SC_GEOCENTRIC_LON'][:].flatten()[subset]
 		mlats = cdf['SC_APEX_LAT'][:].flatten()[subset]
 		mlts = cdf['SC_APEX_MLT'][:].flatten()[subset]
-		
+
 		eflux = cdf['ELE_DIFF_ENERGY_FLUX'][:][subset,:]
 		avg_energy = cdf['ELE_AVG_ENERGY'][:].flatten()[subset]
 		total_eflux = cdf['ELE_TOTAL_ENERGY_FLUX'][:].flatten()[subset]
@@ -298,7 +338,7 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		hall = cdf['HALL_CONDUCTIVITY'][:][subset]
 		intped = cdf['PEDERSEN_CONDUCTANCE'][:][subset]
 		inthall = cdf['HALL_CONDUCTANCE'][:][subset]
-		
+
 		#Plot Electron energy flux
 		dmsp_spectrogram.dmsp_spectrogram(hod,eflux,
 			chen,datalabel=None,cblims=[1e-7,1e-2],
@@ -322,12 +362,20 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		a3.legend(ncol=2,loc=0)
 		a3.set_ylabel('Hall\n Conductance\n[S]')
 
+
 		#Draw conductivity as a pcolor plot with log-scaled color scale
-		T,Z = np.meshgrid(hod,z)
-		mappable = a4.pcolor(T, Z, ped.T, norm=LogNorm(vmin=np.nanmin(ped), vmax=np.nanmax(ped)), cmap='plasma')
-		cb = pp.colorbar(mappable,cax=a44)
-		cb.ax.set_ylabel('Pedersen\nConductivity\n [S/m]')
-		a4.set_ylabel('Altitude\n[km]')
+		try:
+			ped[ped<=0.]=0.01
+			T,Z = np.meshgrid(hod,z)
+			mappable = a4.pcolor(T, Z, ped.T, norm=LogNorm(vmin=np.nanmin(ped), vmax=np.nanmax(ped)), cmap='jet')
+			cb = pp.colorbar(mappable,cax=a44)
+			cb.ax.set_ylabel('Pedersen\nConductivity\n [S/m]')
+			a4.set_ylabel('Altitude\n[km]')
+		except:
+			pass
+
+		for ax in [a1,a2,a3]:
+			ax.xaxis.set_ticklabels([])
 
 		for ax in [a1,a2,a3,a4]:
 			ax.set_xlim(hod[0],hod[-1])
@@ -337,6 +385,7 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		f.suptitle('%.2d-%2.d-%d %s orbit %d' % (year,month,day,hemi,orbit))
 
 		f.savefig(figfn)
+		pp.close(f)
 
 if __name__ == '__main__':
 	import argparse
@@ -344,18 +393,21 @@ if __name__ == '__main__':
 
 	parser = argparse.ArgumentParser(description="Add GLOW conductance to SSJ CDFs")
 
-	parser.add_argument("dmsp_number", help='Process SSM for F## where this argument is ##',type=int,default=None)
+	parser.add_argument("dmsp_number", help='Process SSJ for F## where this argument is ##',type=int,default=None)
 	parser.add_argument("year", help='Year of day to process',type=int,default=None)
 	parser.add_argument("doy", help='Day of year to process',type=int,default=None)
 	parser.add_argument("--clobber", help='Overwrite Conductance SSJ CDF file if exists',action='store_true',default=False)
 	parser.add_argument("--plot", help='Plot conductance and conductivity',action='store_true',default=False)
 	parser.add_argument("--silent", help='Do not print to screen',action='store_true',default=False)
-	
-	args = parser.parse_args()	
-	
+	parser.add_argument('--nocalculate',help='Skip calculation',action='store_true',default=False)
+	args = parser.parse_args()
+
 	dt = special_datetime.doy2datetime(args.doy,args.year)
 	sat,year,month,day = args.dmsp_number,dt.year,dt.month,dt.day
-	run_ssj_glow(sat,year,month,day,create_conductance_cdf=True,clobber=args.clobber,silent=args.silent)
+
+	if not args.nocalculate:
+		run_ssj_glow(sat,year,month,day,create_conductance_cdf=True,
+					clobber=args.clobber,silent=args.silent)
 
 	if args.plot:
 		for orbit in range(1,15):
