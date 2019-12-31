@@ -65,7 +65,7 @@ efs,ecs = auroral_total_eflux[subset].flatten(),auroral_avg_energy[subset].flatt
 phij = auroral_flux[subset,:]
 
 
-print len(idates),ncond
+print(len(idates),ncond)
 #subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,xncond,phij)
 usephij = 1 #Use SSJ fluxes or only Maxwellian
 utsin = uts[0]*np.ones((ncond,))
@@ -78,7 +78,7 @@ phitop = pyglow098.cglow.phitop
 ener = pyglow098.cglow.ener
 z = pyglow098.cglow.zz/1.0e5 #cm->km
 
-print hallcond.shape
+print(hallcond.shape)
 #pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
 #pedcondmax = pyglow098.cglow.pedcond
 #hallcondmax = pyglow098.cglow.hallcond
@@ -182,7 +182,7 @@ dmsp_spectrogram.dmsp_spectrogram(uts,auroral_eflux[subset,:],
 
 T,Z = np.meshgrid(uts,z)
 
-print np.nanmax(ped),np.nanmin(ped)
+print(np.nanmax(ped),np.nanmin(ped))
 mappable = a3.pcolor(T, Z, ped.T, norm=LogNorm(vmin=np.nanmin(ped), vmax=np.nanmax(ped)), cmap='plasma')
 cb = pp.colorbar(mappable,ax=a3)
 cb.ax.set_ylabel('Pedersen\nConductivity\n [S/m]')

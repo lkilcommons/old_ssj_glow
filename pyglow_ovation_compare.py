@@ -43,7 +43,7 @@ for orbit in range(14):
 	subset = np.flatnonzero(oi[auroral]==orbit)
 	
 	if len(subset) < 10:
-		print('No data for orbit %d' % (orbit))
+		print(('No data for orbit %d' % (orbit)))
 		continue
 	#subset = np.arange(4000,4800)
 	#subset = np.arange(1800,1920)
@@ -72,7 +72,7 @@ for orbit in range(14):
 	phij = auroral_flux[subset,:]
 
 
-	print len(idates),ncond
+	print(len(idates),ncond)
 	#subroutine glowssjcond(idates,uts,glats,glongs,f107as,f107s,f107ps,aps,efs,ecs,xncond,phij)
 	usephij = 1 #Use SSJ fluxes or only Maxwellian
 	utsin = uts[0]*np.ones((ncond,))
@@ -85,7 +85,7 @@ for orbit in range(14):
 	ener = pyglow098.cglow.ener
 	z = pyglow098.cglow.zz/1.0e5
 
-	print hallcond.shape
+	print(hallcond.shape)
 	#pyglow098.glowssjcond(idates,uts,glats,glons,f107as,f107s,f107ps,aps,efs,ecs,ncond,phij,0)
 	#pedcondmax = pyglow098.cglow.pedcond
 	#hallcondmax = pyglow098.cglow.hallcond

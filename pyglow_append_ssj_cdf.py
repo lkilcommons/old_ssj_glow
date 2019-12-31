@@ -3,13 +3,48 @@ import numpy as np
 import matplotlib.pyplot as pp
 import traceback
 sys.path.append('/home/liamk/seshat/glowcond/glow098release/GLOW/')
-from geospacepy import special_datetime,dmspcdf_tools,dmsp_spectrogram, satplottools, omnireader
-from spacepy import pycdf
+from geospacepy import special_datetime,satplottools,omnireader
 
+try:
+	from geospacepy import dmsp_spectrogram
+	spectrograms=True
+except ImportError:
+	print('Could not import dmsp_spectrogram library. Will continue, but will not be able to draw spectrograms')
+	spectrograms=False
+
+from spacepy import pycdf
 import multiprocessing
 
 class NoSSJCDFError(Exception):
 	pass
+
+def get_cdf(dmsp_num,year,month,day,instrument,cdfdir=None,return_file=False):
+	"""
+		Create the DMSP CDF filename
+	"""
+	longname = {'ssm':'ssm_magnetometer',
+				'ssies':'ssies_bulk-plasma',
+				'ssj':'ssj_precipitating-electrons-ions'}
+	current_version = {'ssm':'1.0.4',
+					   'ssies':'1.0.3',
+					   'ssj':'1.1.3'}
+
+	fname = 'dmsp-f%.2d_%s_%d%.2d%.2d_v%s.cdf' % (dmsp_num,
+						longname[instrument],year,month,day,current_version[instrument])
+
+	if cdfdir is not None:
+		fullname = os.path.join(cdfdir,fname)
+	else:
+		fullname = fname
+
+	if not os.path.exists(fname):
+		#Try default subdirectory structure
+		fullname = os.path.join(cdfdir,'f%.2d/%s/%d/%.2d' % (dmsp_num,instrument,year,month),fname)
+
+	if not return_file:
+		return pycdf.CDF(fullname)
+	else:
+		return fullname
 
 def mappable_glow(inputs):
 	year,month,day,uts,glats,glons,ele_chan_nfluxes,ele_total_fluxes,ele_avg_energies,test,maxwellian = inputs[:]
@@ -41,6 +76,7 @@ def mappable_glow(inputs):
 	print("Start GLOW run for %d SSJ points UT %.1f-%.1f" % (ncond,
 																uts[0]/3600.,
 																uts[-1]/3600.))
+
 
 	usephij = 0 if maxwellian else 1 #Use SSJ fluxes (1) or only Maxwellian (0)
 	#Test means test repeatability of GLOW (i.e. look effect of bug with save and intent(out))
@@ -108,30 +144,25 @@ def get_f107_ap(dt,silent=False):
 	f107 = np.nanmean(f107_81[today])
 	ap = np.nanmean(ap_81[today])
 	if not silent:
-		print(dt.strftime('%Y%m%d %H:%M'))
-		print('Yesterday F107 %.2f' % (f107p))
-		print('Today F107 %.2f'  % (f107))
-		print('81-day avg F107: %.2f'  % (f107a))
+		print((dt.strftime('%Y%m%d %H:%M')))
+		print(('Yesterday F107 %.2f' % (f107p)))
+		print(('Today F107 %.2f'  % (f107)))
+		print(('81-day avg F107: %.2f'  % (f107a)))
 	return f107,ap,f107p,f107a
 
-def _unused():
-	cdfm = dmspcdf_tools.get_cdf(sat,year,month,day,'ssm')
-	cdfies = dmspcdf_tools.get_cdf(sat,year,month,day,'ssies')
-
-
-def get_cond_cdffn(ssj_cdffn,cond_cdf_dir='/home/liamk/code/condcdf'):
+def get_cond_cdffn(ssj_cdffn,cond_cdf_dir=None):
 	if cond_cdf_dir is None:
 		cond_cdffn = os.path.splitext(ssj_cdffn)[0]+'_GLOWcond_auroral_pi.cdf'
 	else:
 		if not os.path.exists(cond_cdf_dir):
 			os.makedirs(cond_cdf_dir)
-			print("Made %s" %(cond_cdf_dir))
+			print(("Made %s" %(cond_cdf_dir)))
 
 		ssj_cdffn_leaf = os.path.split(ssj_cdffn)[-1]
 		cond_cdffn = os.path.join(cond_cdf_dir,os.path.splitext(ssj_cdffn)[0]+'_GLOWcond_auroral_pi.cdf')
 	return cond_cdffn
 
-def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clobber=True,silent=False):
+def run_ssj_glow(sat,year,month,day,cdfdir=None,minlat=50.,create_conductance_cdf=False,clobber=True,silent=False):
 	"""
 	Calculate the conductivities along DMSP satellite track
 	for a particular day
@@ -212,6 +243,7 @@ def run_ssj_glow(sat,year,month,day,minlat=50.,create_conductance_cdf=False,clob
 
 		print('------Took %.1f minutes-----' % ((endsec-startsec)/60.))
 
+
 		#
 		#Unpack the results
 		#
@@ -291,7 +323,7 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 	#
 	# Get conductance CDF
 	#
-	cdffn = dmspcdf_tools.get_cdf(sat,year,month,day,'ssj',return_file=True)
+	cdffn = get_cdf(sat,year,month,day,'ssj',cdfdir=cdfdir,return_file=True)
 	cdffn_cond = get_cond_cdffn(cdffn)
 	cdffn_cond_leaf = os.path.split(cdffn_cond)[-1]
 	cdffn_cond_leaf = os.path.splitext(cdffn_cond_leaf)[0]
@@ -339,10 +371,12 @@ def plot_orbit_cond(sat,year,month,day,orbit,minlat=50.,plotdir=None):
 		intped = cdf['PEDERSEN_CONDUCTANCE'][:][subset]
 		inthall = cdf['HALL_CONDUCTANCE'][:][subset]
 
-		#Plot Electron energy flux
-		dmsp_spectrogram.dmsp_spectrogram(hod,eflux,
-			chen,datalabel=None,cblims=[1e-7,1e-2],
-			ax=a1,ax_cb=a11,fluxunits='Electron\nEnergy Flux\n[mW/m^2]')
+
+		if spectrograms:
+			#Plot Electron energy flux
+			dmsp_spectrogram.dmsp_spectrogram(hod,eflux,
+				chen,datalabel=None,cblims=[1e-7,1e-2],
+				ax=a1,ax_cb=a11,fluxunits='Electron\nEnergy Flux\n[mW/m^2]')
 
 		#Plot Pedersen Conductance
 		a2.plot(hod,intped,'r.-',label='DMSP+GLOW')
@@ -396,6 +430,8 @@ if __name__ == '__main__':
 	parser.add_argument("dmsp_number", help='Process SSJ for F## where this argument is ##',type=int,default=None)
 	parser.add_argument("year", help='Year of day to process',type=int,default=None)
 	parser.add_argument("doy", help='Day of year to process',type=int,default=None)
+	parser.add_argument("--dmsp_cdf_dir",help='Where to look for DMSP CDF files',type=str,default=None)
+	parser.add_argument("--plot_dir",help='Where to put plots',type=str,default=None)
 	parser.add_argument("--clobber", help='Overwrite Conductance SSJ CDF file if exists',action='store_true',default=False)
 	parser.add_argument("--plot", help='Plot conductance and conductivity',action='store_true',default=False)
 	parser.add_argument("--silent", help='Do not print to screen',action='store_true',default=False)
@@ -411,6 +447,8 @@ if __name__ == '__main__':
 
 	if args.plot:
 		for orbit in range(1,15):
-			plot_orbit_cond(sat,year,month,day,1*orbit,minlat=50.,plotdir=None)
-			plot_orbit_cond(sat,year,month,day,-1*orbit,minlat=50.,plotdir=None)
+			plot_orbit_cond(sat,year,month,day,1*orbit,
+							minlat=50.,cdfdir=args.dmsp_cdf_dir,plotdir=args.plotdir)
+			plot_orbit_cond(sat,year,month,day,-1*orbit,
+							minlat=50.,plotdir=args.plotdir,cdfdir=args.dmsp_cdf_dir)
 
